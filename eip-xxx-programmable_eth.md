@@ -22,7 +22,7 @@ In one word, the motivation for this EIP is **friction**. In the case of decentr
 
 ## Specification
 
-#### Extension Functions
+### Extension Functions
 A new function type is to be added: `extension`. This function type acts as an internal function, and therefore cannot be called directly or by other contracts. Within the scope of extension functions is a new globally available variable `client`, which has all of the members of an `address` type as well as a new function, `transferFor(address _to, uint _amount)` which transfers the given amount of Ether from the client to the specified address. Example:
 
 ```
@@ -41,11 +41,11 @@ contract ExtensionExample {
 
 Notice how when the extension function is called from a non-extension function, a reference to `this` is made with the `_from` address passed in as an argument. This allows extension functions to be called, where the `client` will be the address supplied. This will revert if the client address has not approved the smart contract for extension functions.
 
-#### User Approval/Unapproval
+### User Approval/Unapproval
 
 The second half of this proposal is enabling users to be able to approve smart contracts to execute extension functions in the context of the user, and revoke a smart contract's approval. This is achieved by adding two new methods, `approve(address _spender)` and `unapprove(address _spender)`, which are called by setting the `to` field in a transaction to the user's own address and the `data` field is encoded the same way that a contract function call would normally be encoded. These functions can only be called by the user themself.
 
-#### Other (Minor) Changes
+### Other (Minor) Changes
 
 The `address` type should have two more members in addition to the `transferFor` function:
 
@@ -56,7 +56,7 @@ The JSON RPC should have additional methods:
 
 - `eth_getExtensions` takes in same data as *eth_getBalance*, returns array of approved contract addresses
 
-## Use Case --- ERC20-Compliant Ether
+## Use Case: ERC20-Compliant Ether
 
 The perfect demonstration of what this proposal will enable is making Ether ERC20 compliant. Here is an abridged version of the smart contract for this, this code example focuses on the *changes* to the standard ERC20 Token contract.
 
