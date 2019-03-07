@@ -1,45 +1,145 @@
 ---
 eip: <to be assigned>
-title: <EIP title>
-author: <a list of the author's or authors' name(s) and/or username(s), or name(s) and email(s), e.g. (use with the parentheses or triangular brackets): FirstName LastName (@GitHubUsername), FirstName LastName <foo@bar.com>, FirstName (@GitHubUsername) and GitHubUsername (@GitHubUsername)>
-discussions-to: <URL>
+title: ERC20-Compliant Ether
+author: Zack Rubenstein (@zrubenst)
+discussions-to: *TBD*
 status: Draft
-type: <Standards Track (Core, Networking, Interface, ERC)  | Informational | Meta>
-category (*only required for Standard Track): <Core | Networking | Interface | ERC>
-created: <date created on, in ISO 8601 (yyyy-mm-dd) format>
-requires (*optional): <EIP number(s)>
-replaces (*optional): <EIP number(s)>
+type: Standards Track
+category: ERC
+created: 2019-03-07
+requires: XXX (Programmable Ether)
 ---
 
-This is the suggested template for new EIPs.
-
-Note that an EIP number will be assigned by an editor. When opening a pull request to submit your EIP, please use an abbreviated title in the filename, `eip-draft_title_abbrev.md`.
-
-The title should be 44 characters or less.
-
 ## Simple Summary
-If you can't explain it simply, you don't understand it well enough." Provide a simplified and layman-accessible explanation of the EIP.
-
-## Abstract
-A short (~200 word) description of the technical issue being addressed.
+Make Ether comply with the [ERC20](https://eips.ethereum.org/EIPS/eip-20) token standard.
 
 ## Motivation
-The motivation is critical for EIPs that want to change the Ethereum protocol. It should clearly explain why the existing protocol specification is inadequate to address the problem that the EIP solves. EIP submissions without sufficient motivation may be rejected outright.
+With the potential implementation of [EIPXXX (Programmable Ether)](https://eips.ethereum.org/EIPS/eip-20), it becomes possible to make Ether ERC20 compliant.
 
 ## Specification
-The technical specification should describe the syntax and semantics of any new feature. The specification should be detailed enough to allow competing, interoperable implementations for any of the current Ethereum platforms (go-ethereum, parity, cpp-ethereum, ethereumj, ethereumjs, and [others](https://github.com/ethereum/wiki/wiki/Clients)).
 
-## Rationale
-The rationale fleshes out the specification by describing what motivated the design and why particular design decisions were made. It should describe alternate designs that were considered and related work, e.g. how the feature is supported in other languages. The rationale may also provide evidence of consensus within the community, and should discuss important objections or concerns raised during discussion.-->
+EIPXXX would add a new member function `transferTo` to variables of type `address`. This single addition enables the following smart contract to become inter-operable with Ether.
 
-## Backwards Compatibility
-All EIPs that introduce backwards incompatibilities must include a section describing these incompatibilities and their severity. The EIP must explain how the author proposes to deal with these incompatibilities. EIP submissions without a sufficient backwards compatibility treatise may be rejected outright.
+```
+/**
+ * @title SafeMath
+ * @dev see https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/contracts/math/SafeMath.sol
+ */
+library SafeMath {
 
-## Test Cases
-Test cases for an implementation are mandatory for EIPs that are affecting consensus changes. Other EIPs can choose to include links to test cases if applicable.
+  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+    if (a == 0) return 0;
+    uint256 c = a * b;
+    require(c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    require(b > 0);
+    uint256 c = a / b;
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    require(b <= a);
+    uint256 c = a - b;
+    return c;
+  }
+
+  function add(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a + b;
+    require(c >= a);
+    return c;
+  }
+
+  function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+    require(b != 0);
+    return a % b;
+  }
+}
+
+/**
+ * @title ERC20 interface
+ * @dev see https://eips.ethereum.org/EIPS/eip-20
+ */
+interface IERC20 {
+  function transfer(address to, uint256 value) external returns (bool);
+  function approve(address spender, uint256 value) external returns (bool);
+  function transferFrom(address from, address to, uint256 value) external returns (bool);
+  function totalSupply() external view returns (uint256);
+  function balanceOf(address owner) external view returns (uint256);
+  function allowance(address owner, address spender) external view returns (uint256);
+
+  event Transfer(address indexed from, address indexed to, uint256 value);
+  event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+
+/**
+ * @title ERC20-Compliant Ether
+ * @dev see https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/contracts/token/ERC20/ERC20.sol
+ *
+ * An ERC20 Token that is mapped one-to-one with Ether. balanceOf returns the Ether balance, 
+ * and transfer/transferFrom transfer Ether, not a secondary token (like WETH).
+ * No deposits or withdrawals of Ether, because for all intents and purposes, this is Ether.
+ */
+contract EtherERC20 is IERC20 {
+  using SafeMath for uint256;
+
+  mapping (address => uint256) private _balances;
+  mapping (address => mapping (address => uint256)) private _allowed;
+
+  // ------------------------------------
+  // ERC20 Interface Implementation
+
+  function totalSupply() public view returns (uint256) {
+    return 0;
+  }
+
+  function balanceOf(address owner) public view returns (uint256) {
+    return owner.balance;
+  }
+
+  function allowance(address owner, address spender) public view returns (uint256) {
+    return _allowed[owner][spender];
+  }
+
+  function transfer(address to, uint256 value) public returns (bool) {
+    _transfer(msg.sender, to, value);
+    return true;
+  }
+
+  function approve(address spender, uint256 value) public returns (bool) {
+    _approve(msg.sender, spender, value);
+    return true;
+  }
+
+  function transferFrom(address from, address to, uint256 value) public returns (bool) {
+    _approve(from, msg.sender, _allowed[from][msg.sender].sub(value));
+    _transfer(from, to, value);
+    return true;
+  }
+
+  // ------------------------------------
+  // Core Functions
+
+  function _transfer(address from, address to, uint256 value) internal {
+    from.transferTo(to, value); // will revert if the from address has not approved this contract
+    emit Transfer(from, to, value);
+  }
+
+  function _approve(address owner, address spender, uint256 value) internal {
+    _allowed[owner][spender] = value;
+    emit Approval(owner, spender, value);
+  }
+}
+```
+
+An ERC20 Token that is mapped one-to-one with Ether. balanceOf returns the Ether balance, and transfer/transferFrom transfer Ether, not a secondary token (like WETH). No deposits or withdrawals of Ether, because for all intents and purposes, this is Ether.
 
 ## Implementation
-The implementations must be completed before any EIP is given status "Final", but it need not be completed before the EIP is accepted. While there is merit to the approach of reaching consensus on the specification and rationale before writing code, the principle of "rough consensus and running code" is still useful when it comes to resolving many discussions of API details.
+
+If [EIPXXX]() is accepted, and the smart contract above is validated/approved, it will be deployed. It's address would be pinned here. Technologies that rely on ERC20 tokens that wish to support Ether would point to the deployed contract's address and treat it as any old ERC20 token, because it *is* an ERC20 token.
 
 ## Copyright
 Copyright and related rights waived via [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
